@@ -1,7 +1,7 @@
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
 DOSSIER = Path(__file__).parent / "donnees"
@@ -50,7 +50,7 @@ else:
     st.subheader("Indicateurs clés")
     col1, col2, col3 = st.columns(3)
     
-    conso_totale = df_filtre['kwh'].sum() / 1e6 
+    conso_totale = df_filtre['kwh'].sum() / 1e6  
     conso_moy_abonne = df_filtre['kwh_par_abonne'].mean() if not df_filtre.empty else 0
     heures_moy = df_filtre['heures_courant'].mean() if not df_filtre.empty else 0
     
@@ -94,16 +94,15 @@ else:
             st.write(f"**Corrélation avec les heures de courant :** {corr_h:.2f}")
             st.write(f"**Corrélation avec la température :** {corr_t:.2f}")
             
-            
+            # Nuage de points 
             st.markdown("---")
-            fig_scatter = px.scatter(
-                residentiel_filtre,
-                x="heures_courant",
-                y="kwh_par_abonne",
-                title="Relation entre Heures de courant et kWh par abonné (Résidentiel)",
-                labels={"heures_courant": "Heures de courant", "kwh_par_abonne": "kWh par abonné"}
-            )
-            st.plotly_chart(fig_scatter, use_container_width=True)
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.scatter(residentiel_filtre['heures_courant'], residentiel_filtre['kwh_par_abonne'], alpha=0.7)
+            ax.set_xlabel("Heures de courant")
+            ax.set_ylabel("kWh par abonné")
+            ax.set_title("Relation entre Heures de courant et kWh par abonné (Résidentiel)")
+            ax.grid(True)
+            st.pyplot(fig)
         else:
             st.info("Pas de données résidentielles pour ces filtres.")
 
@@ -118,14 +117,12 @@ else:
             st.markdown("---")
             df_cap = df[df["commune"].str.contains("Cap-Haïtien", case=False, na=False)]
             if not df_cap.empty:
-                fig_hist = px.histogram(
-                    df_cap,
-                    x="heures_courant",
-                    nbins=10,
-                    title="Distribution des heures de courant à Cap-Haïtien",
-                    labels={"heures_courant": "Heures de courant", "count": "Fréquence"}
-                )
-                st.plotly_chart(fig_hist, use_container_width=True)
+                fig, ax = plt.subplots(figsize=(8, 5))
+                ax.hist(df_cap['heures_courant'], bins=10, edgecolor='black')
+                ax.set_xlabel("Heures de courant")
+                ax.set_ylabel("Fréquence")
+                ax.set_title("Distribution des heures de courant à Cap-Haïtien")
+                st.pyplot(fig)
             else:
                 st.info("Aucune donnée spécifique à Cap-Haïtien dans le jeu de données actuel.")
         else:
