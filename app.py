@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 DOSSIER = Path(__file__).parent / "donnees"
@@ -10,14 +11,14 @@ st.set_page_config(page_title="L'électricité dans 12 quartiers", page_icon="�
 st.title("L'électricité dans 12 quartiers")
 st.caption("Relevés mensuels de janvier 2024 à décembre 2025. Données fictives.")
 
-# Charger le fichier propre avec du cache
+
 @st.cache_data
 def charger_donnees():
     return pd.read_csv(DOSSIER / "consommation_propre.csv")
 
 df = charger_donnees()
 
-# Filtres dans la barre latérale
+
 st.sidebar.header("Filtres")
 
 toutes_communes = sorted(df['commune'].unique())
@@ -35,21 +36,21 @@ annee_selectionnee = st.sidebar.selectbox(
     index=annee_defaut_idx
 )
 
-# Filtrage du DataFrame
+
 df_filtre = df[
     (df['commune'].isin(communes_selectionnees)) & 
     (df['annee'].astype(str) == str(annee_selectionnee))
 ]
 
-# Vérification si aucune commune n'est sélectionnée
+
 if not communes_selectionnees:
     st.warning("Veuillez sélectionner au moins une commune dans la barre latérale.")
 else:
-    # Trois indicateurs clés (KPIs)
+    
     st.subheader("Indicateurs clés")
     col1, col2, col3 = st.columns(3)
     
-    conso_totale = df_filtre['kwh'].sum() / 1e6  # en millions de kWh
+    conso_totale = df_filtre['kwh'].sum() / 1e6 
     conso_moy_abonne = df_filtre['kwh_par_abonne'].mean() if not df_filtre.empty else 0
     heures_moy = df_filtre['heures_courant'].mean() if not df_filtre.empty else 0
     
@@ -59,7 +60,7 @@ else:
     
     st.markdown("---")
 
-    # Onglets d'analyse (parties 4 à 8 du notebook)
+    
     onglet1, onglet2, onglet3, onglet4, onglet5 = st.tabs([
         "Quartiers & Types", 
         "Évolution Commune", 
@@ -92,6 +93,17 @@ else:
             corr_t = residentiel_filtre['kwh_par_abonne'].corr(residentiel_filtre['temperature_c'])
             st.write(f"**Corrélation avec les heures de courant :** {corr_h:.2f}")
             st.write(f"**Corrélation avec la température :** {corr_t:.2f}")
+            
+            
+            st.markdown("---")
+            fig_scatter = px.scatter(
+                residentiel_filtre,
+                x="heures_courant",
+                y="kwh_par_abonne",
+                title="Relation entre Heures de courant et kWh par abonné (Résidentiel)",
+                labels={"heures_courant": "Heures de courant", "kwh_par_abonne": "kWh par abonné"}
+            )
+            st.plotly_chart(fig_scatter, use_container_width=True)
         else:
             st.info("Pas de données résidentielles pour ces filtres.")
 
@@ -101,6 +113,21 @@ else:
             stats_c = df_filtre.groupby('commune')['heures_courant'].agg(['median', lambda x: x.quantile(0.25), lambda x: x.quantile(0.75)])
             stats_c.columns = ['Médiane', 'Q1', 'Q3']
             st.dataframe(stats_c)
+            
+            
+            st.markdown("---")
+            df_cap = df[df["commune"].str.contains("Cap-Haïtien", case=False, na=False)]
+            if not df_cap.empty:
+                fig_hist = px.histogram(
+                    df_cap,
+                    x="heures_courant",
+                    nbins=10,
+                    title="Distribution des heures de courant à Cap-Haïtien",
+                    labels={"heures_courant": "Heures de courant", "count": "Fréquence"}
+                )
+                st.plotly_chart(fig_hist, use_container_width=True)
+            else:
+                st.info("Aucune donnée spécifique à Cap-Haïtien dans le jeu de données actuel.")
         else:
             st.info("Aucune donnée disponible.")
 
@@ -109,7 +136,7 @@ else:
         top3 = df_filtre.nlargest(3, 'kwh')[['mois', 'quartier', 'type', 'kwh']]
         st.dataframe(top3, hide_index=True)
 
-    # Conclusion et Données filtrées dans un expander
+    
     st.markdown("---")
     st.subheader("Conclusion")
     st.markdown("""
